@@ -14,6 +14,7 @@ from .accounts.views import (
     AccountRetirementView,
     AccountViewSet,
     DeactivateLogoutView,
+    DeactivateLogoutViewV2,
     LMSAccountRetirementView
 )
 from .preferences.views import PreferencesDetailView, PreferencesView
@@ -97,6 +98,11 @@ urlpatterns = [
     url(
         r'^v1/accounts/deactivate_logout/$',
         DeactivateLogoutView.as_view(),
+        name='deactivate_logout'
+    ),
+    url(
+        r'^v1/accounts/deactivate_logoutv2/$',
+        DeactivateLogoutViewV2.as_view(),
         name='deactivate_logout'
     ),
     url(
