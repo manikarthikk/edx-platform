@@ -96,13 +96,6 @@ USER_PROFILE_PII = {
     'bio': None,
 }
 
-GDPR_PARAMETERS = [
-    'useremail', 'password'
-]
-
-def get_gdpr_parameters(dictionary):
-    return {key: dictionary[key] for key in GDPR_PARAMETERS if key in dictionary}
-
 def request_requires_username(function):
     """
     Requires that a ``username`` key containing a truthy value exists in
