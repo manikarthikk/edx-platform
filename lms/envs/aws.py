@@ -1097,10 +1097,23 @@ RETIREMENT_SERVICE_WORKER_USERNAME = ENV_TOKENS.get(
 )
 RETIREMENT_STATES = ENV_TOKENS.get('RETIREMENT_STATES', RETIREMENT_STATES)
 
+# Making the display of course discovery and dashboard tabs configurable
+ENABLE_COURSE_DISCOVERY = FEATURES.get('ENABLE_COURSE_DISCOVERY')
+ENABLE_DASHBOARD_TABS = FEATURES.get('ENABLE_DASHBOARD_TABS')
+
+# Social Django defaults to HTTP scheme when generating redirect_uri
+# It is therefore necessary to add this setting in order to support
+# changing the redirect_uri to HTTPS. Defaulting to False (default behavior)
+# and expecting client to override.
+REDIRECT_IS_HTTPS = ENV_TOKENS.get('REDIRECT_IS_HTTPS', REDIRECT_IS_HTTPS)
+
 ############################### Plugin Settings ###############################
 
 from openedx.core.djangoapps.plugins import plugin_settings, constants as plugin_constants
 plugin_settings.add_plugins(__name__, plugin_constants.ProjectType.LMS, plugin_constants.SettingsType.AWS)
+
+######################### Enable honor mode eligible for certificate ##########
+ENABLE_CERTIFICATES_FOR_HONOR_MODE = ENV_TOKENS.get('ENABLE_CERTIFICATES_FOR_HONOR_MODE', ENABLE_CERTIFICATES_FOR_HONOR_MODE)
 
 ########################## Derive Any Derived Settings  #######################
 

@@ -401,6 +401,10 @@ FEATURES = {
 
     # Set this to true to make Delete requests from third party agent
     'ENABLE_OAUTH_ACCOUNT_DELETION': True,
+  
+    # Making the display of course discovery and dashboard tabs configurable
+    'ENABLE_COURSE_DISCOVERY': True,
+    'ENABLE_DASHBOARD_TABS': True,
 }
 
 # Settings for the course reviews tool template and identification key, set either to None to disable course reviews
@@ -3482,3 +3486,12 @@ USER_STATE_BATCH_SIZE = 5000
 from openedx.core.djangoapps.plugins import plugin_apps, plugin_settings, constants as plugin_constants
 INSTALLED_APPS.extend(plugin_apps.get_apps(plugin_constants.ProjectType.LMS))
 plugin_settings.add_plugins(__name__, plugin_constants.ProjectType.LMS, plugin_constants.SettingsType.COMMON)
+
+# Social Django defaults to HTTP scheme when generating redirect_uri
+# It is therefore necessary to add this setting in order to support
+# changing the redirect_uri to HTTPS. Defaulting to False (default behavior)
+# and expecting client to override.
+REDIRECT_IS_HTTPS = False
+
+# this will enable certificate generation for honor mode enrollments
+ENABLE_CERTIFICATES_FOR_HONOR_MODE = False
