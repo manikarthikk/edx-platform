@@ -103,7 +103,7 @@ urlpatterns = [
     url(
         r'^v1/accounts/deactivate_logoutv2/$',
         DeactivateLogoutViewV2.as_view(),
-        name='deactivate_logout'
+        name='deactivate_logout_v2'
     ),
     url(
         r'^v1/accounts/{}/verification_status/$'.format(settings.USERNAME_PATTERN),

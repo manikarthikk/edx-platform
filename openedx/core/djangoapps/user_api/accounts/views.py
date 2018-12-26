@@ -10,6 +10,7 @@ from functools import wraps
 
 import pytz
 from consent.models import DataSharingConsent
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, logout
 from django.contrib.sites.models import Site
 from django.core.cache import cache
@@ -95,6 +96,12 @@ USER_PROFILE_PII = {
     'bio': None,
 }
 
+GDPR_PARAMETERS = [
+    'useremail', 'password'
+]
+
+def get_gdpr_parameters(dictionary):
+    return {key: dictionary[key] for key in GDPR_PARAMETERS if key in dictionary}
 
 def request_requires_username(function):
     """
@@ -375,20 +382,21 @@ class AccountRetireMailingsView(APIView):
         except Exception as exc:  # pylint: disable=broad-except
             return Response(text_type(exc), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            
+
+
 class DeactivateLogoutViewV2(APIView):
     """
-    POST /api/user/v2/accounts/deactivate_logout/
+    POST /api/user/v1/accounts/deactivate_logoutv2/
     {
         "password": "example_password",
-        "jwtToken": "example_password",
-        "userEmail": "user1@example.com",
+        "useremail": "user1@example.com",
     }
 
     **POST Parameters**
 
-      A POST request must include the following parameter.
+      A POST request can include one of the following parameter.
 
+      * useremail: Optional. the email of the user being deactivated
       * password: Required. The current password of the user being deactivated.
 
     **POST Response Values**
@@ -416,47 +424,46 @@ class DeactivateLogoutViewV2(APIView):
 
     def post(self, request):
         """
-        POST /api/user/v2/accounts/deactivate_logout/
+        POST /api/user/v2/accounts/deactivate_logoutv2/
 
         Marks the user as having no password set for deactivation purposes,
         and logs the user out.
         """
         user_model = get_user_model()
-        
         try:
-            use_email = request.POST['useremail']
-            password = request.POST['Password']
-            user = None
-            if use_email:
-                if password:
-                    user = request.user
-                    verify_user_response = self._verify_user(request)
-                    if verify_user_response.status_code != status.HTTP_204_NO_CONTENT:
-                        return verify_user_response
+            oauth_account_deletion = settings.FEATURES.get('ENABLE_OAUTH_ACCOUNT_DELETION', False)
+            if oauth_account_deletion:
+                useremail = request.POST.get('useremail', False)
+                if useremail:
+                    request.user = User.objects.get(email=useremail)
+                    self._check_excessive_login_attempts(request.user)
                 else:
-                    user = User.objects.get(email_address=use_email)
+                    self._process_account_deactivation(request)
+            else:
+                self._process_account_deactivation(request)
+               
             with transaction.atomic():
-                UserRetirementStatus.create_retirement(user)
+                UserRetirementStatus.create_retirement(request.user)
                 # Unlink LMS social auth accounts
-                UserSocialAuth.objects.filter(user_id=user.id).delete()
+                UserSocialAuth.objects.filter(user_id=request.user.id).delete()
                 # Change LMS password & email
-                user_email = user.email
-                user.email = get_retired_email_by_email(user.email)
-                user.save()
-                _set_unusable_password(user)
+                user_email = request.user.email
+                request.user.email = get_retired_email_by_email(request.user.email)
+                request.user.save()
+                _set_unusable_password(request.user)
                 # TODO: Unlink social accounts & change password on each IDA.
                 # Remove the activation keys sent by email to the user for account activation.
-                Registration.objects.filter(user=user).delete()
+                Registration.objects.filter(user=request.user).delete()
                 # Add user to retirement queue.
                 # Delete OAuth tokens associated with the user.
-                retire_dop_oauth2_models(user)
-                retire_dot_oauth2_models(user)
+                retire_dop_oauth2_models(request.user)
+                retire_dot_oauth2_models(request.user)
 
                 try:
                     # Send notification email to user
                     site = Site.objects.get_current()
                     notification_context = get_base_template_context(site)
-                    notification_context.update({'full_name': user.profile.name})
+                    notification_context.update({'full_name': request.user.profile.name})
                     notification = DeletionNotificationMessage().personalize(
                         recipient=Recipient(username='', email_address=user_email),
                         language=request.user.profile.language,
@@ -478,6 +485,14 @@ class DeactivateLogoutViewV2(APIView):
             )
         except Exception as exc:  # pylint: disable=broad-except
             return Response(text_type(exc), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _process_account_deactivation(self, request):
+        """
+        Validates the user password from the request if it matches with the user request the account deletion
+        """
+        verify_user_password_response = self._verify_user_password(request)
+        if verify_user_password_response.status_code != status.HTTP_204_NO_CONTENT:
+            return verify_user_password_response
 
     def _verify_user_password(self, request):
         """
