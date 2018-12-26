@@ -96,6 +96,7 @@ USER_PROFILE_PII = {
     'bio': None,
 }
 
+
 def request_requires_username(function):
     """
     Requires that a ``username`` key containing a truthy value exists in
