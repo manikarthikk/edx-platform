@@ -418,7 +418,7 @@ class DeactivateLogoutViewV2(APIView):
 
     def post(self, request):
         """
-        POST /api/user/v2/accounts/deactivate_logoutv2/
+        POST /api/user/v1/accounts/deactivate_logoutv2/
 
         Marks the user as having no password set for deactivation purposes,
         and logs the user out.
@@ -427,8 +427,8 @@ class DeactivateLogoutViewV2(APIView):
         try:
             oauth_account_deletion = settings.FEATURES.get('ENABLE_OAUTH_ACCOUNT_DELETION', False)
             if oauth_account_deletion:
-                useremail = request.POST.get('useremail', False)
-                if useremail:
+                user_email = request.POST.get('useremail', False)
+                if user_email:
                     request.user = User.objects.get(email=useremail)
                     self._check_excessive_login_attempts(request.user)
                 else:
